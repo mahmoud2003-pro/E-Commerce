@@ -115,9 +115,10 @@ geolocation
 
 ---
 
-## Dashboard
+## 🚀 Live Interactive Dashboard
 
-(Add dashboard here)
+Explore the fully interactive dark-mode executive dashboard live on Streamlit Cloud:
+👉 [Launch Analytics Instance](https://e-commerce-ebkuekwxcezrotxggsgzx7.streamlit.app/)
 
 ## Strategic Business Recommendations
 
