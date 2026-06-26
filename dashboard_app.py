@@ -163,18 +163,61 @@ elif page == "🚚 Logistics & Operations":
         st.plotly_chart(apply_dark_theme(fig_rating), use_container_width=True)
 
 # ==========================================================
-# 6. VIEW 3: MARKETPLACE SLICES
+# 6. VIEW 3: MARKETPLACE SLICES & REGIONAL ECONOMICS
 # ==========================================================
 elif page == "🛍️ Marketplace Slices":
-    st.title("🛍️ Category Volume Matrices & Payment Method Splits")
+    st.title("🛍️ Category Volume Matrices & Regional Performance")
     st.markdown("---")
     
-    # Calculate Payment Distribution details
+    # ------------------------------------------------------
+    # NEW INTEGRATION: UNINFLATED REGIONAL ECONOMICS METRICS
+    # ------------------------------------------------------
+    st.subheader("🇧🇷 Regional Performance Breakdown: Top 10 States by Revenue")
+    
+    # 1. Aggregate regional performance on filtered_payments (Inflation Free)
+    state_summary = filtered_payments.groupby('customer_state').agg(
+        total_revenue=('payment_value', 'sum'),
+        total_orders=('order_id', 'nunique')
+    ).reset_index()
+
+    # 2. Extract Freight Cost from filtered_master 
+    freight_summary = filtered_master.groupby('customer_state').agg(
+        avg_freight_cost=('freight_value', 'mean')
+    ).reset_index()
+
+    # 3. Combine safely, calculate true percentages, and slice Top 10
+    state_summary = pd.merge(state_summary, freight_summary, on='customer_state', how='left')
+    total_platform_revenue = state_summary['total_revenue'].sum()
+    state_summary['revenue_share_pct'] = (state_summary['total_revenue'] / total_platform_revenue) * 100
+    top_states = state_summary.sort_values(by='total_revenue', ascending=False).head(10)
+
+    # 4. Render Regional Interactive Plotly Dual-Data Chart
+    fig_states = px.bar(
+        top_states, 
+        x='customer_state', 
+        y='total_revenue',
+        color_discrete_sequence=['#38bdf8'],
+        hover_data={
+            'revenue_share_pct': ':.2f%', 
+            'total_orders': ':,', 
+            'avg_freight_cost': ':R$ ,.2f'
+        },
+        labels={
+            'customer_state': 'Customer State',
+            'total_revenue': 'Total Revenue (R$)'
+        }
+    )
+    # Add crisp, bright floating data tags above the columns
+    fig_states.update_traces(texttemplate='R$ %{y:,.2s}', textposition='outside')
+    st.plotly_chart(apply_dark_theme(fig_states), use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Existing Category Layout Components below
     pay_summary = order_payments['payment_type'].value_counts(normalize=True).reset_index()
     pay_summary.columns = ['payment_type', 'percentage']
     pay_summary['percentage'] *= 100
     
-    # Category Analytics Data Frame
     category_summary = filtered_master.groupby('product_category_name_english').agg(
         total_revenue=('price', 'sum'),
         total_orders=('order_id', 'nunique')
@@ -183,14 +226,14 @@ elif page == "🛍️ Marketplace Slices":
     p_col1, p_col2 = st.columns(2)
     with p_col1:
         st.subheader("💳 Platform Checkout Method Distribution")
-        fig_pay = px.bar(pay_summary, x='percentage', y='payment_type', orientation='h', color_discrete_sequence=['#38bdf8'], text_auto='.2f')
+        fig_pay = px.bar(pay_summary, x='percentage', y='payment_type', orientation='h', color_discrete_sequence=['#6366f1'], text_auto='.2f')
         fig_pay.update_layout(xaxis=dict(range=[0, 100]), yaxis={'categoryorder':'total ascending'})
         st.plotly_chart(apply_dark_theme(fig_pay), use_container_width=True)
         
     with p_col2:
         st.subheader("💰 Top 10 Marketplace Revenue Drivers")
         top_rev_cat = category_summary.sort_values(by='total_revenue', ascending=False).head(10)
-        fig_cat_rev = px.bar(top_rev_cat, x='product_category_name_english', y='total_revenue', color_discrete_sequence=['#6366f1'])
+        fig_cat_rev = px.bar(top_rev_cat, x='product_category_name_english', y='total_revenue', color_discrete_sequence=['#4ade80'])
         st.plotly_chart(apply_dark_theme(fig_cat_rev), use_container_width=True)
         
     st.markdown("---")
@@ -209,7 +252,6 @@ elif page == "🛍️ Marketplace Slices":
             total_orders=('order_id', 'nunique'),
             avg_delivery_delta=('delivery_delta', 'mean')
         ).reset_index()
-        # Ensure robust evaluation threshold
         frequent_cats = categories_perf[categories_perf['total_orders'] > 100]
         worst_shipping = frequent_cats.sort_values(by='avg_delivery_delta', ascending=True).head(10)
         
