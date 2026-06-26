@@ -39,7 +39,7 @@ Tables used:
 - Geolocation
 
 ## Entity Relationship Diagram (ERD)
-![ERD](flowcharts\ERD.png)
+![ERD](flowcharts/ERD.png)
 
 ### Table Relationships
 
